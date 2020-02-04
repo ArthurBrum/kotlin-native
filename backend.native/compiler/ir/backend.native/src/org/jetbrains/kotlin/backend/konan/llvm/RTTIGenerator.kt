@@ -195,11 +195,13 @@ internal class RTTIGenerator(override val context: Context) : ContextUtils {
 
         val instanceSize = getInstanceSize(bodyType, className)
 
-        val superTypeOrAny = irClass.getSuperClassNotAny() ?: context.ir.symbols.any.owner
+        val superTypeOrAny = irClass.getSuperClassNotAny().let { superType ->
+            if (superType == null || !superType.requiresRtti()) context.ir.symbols.any.owner else superType
+        }
         val superType = if (irClass.isAny()) NullPointer(runtime.typeInfoType)
                 else superTypeOrAny.typeInfoPtr
 
-        val implementedInterfaces = irClass.implementedInterfaces
+        val implementedInterfaces = irClass.implementedInterfaces.filter { it.requiresRtti() }
 
         val interfaces = implementedInterfaces.map { it.typeInfoPtr }
         val interfacesPtr = staticData.placeGlobalConstArray("kintf:$className",
